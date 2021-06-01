@@ -1,12 +1,11 @@
-# Detection and Decoding of Hidden Messages in Digital Images
+# Detection of Hidden Messages in Digital Images
 * Eduardo de Sousa Siqueira		_nUSP_: 9278299
 * Igor Barbosa Grécia Lúcio		_nUSP_: 9778821
 ---
 
 ## Abstract
 
-In this project we will use Image Processing techniques both in the spatial and frequency domains to detect the presence of abnormalities and/or hidden data in images, 
-and attempt to reconstruct detected messages from stego samples.
+In this project we will use Image Processing techniques both in the spatial and frequency domains to detect the presence of abnormalities and/or hidden data in images.
 
 ### Techniques
 We will primarily use Image Segmentation and Sampling, coupled with noise detection and statistical analysis.
