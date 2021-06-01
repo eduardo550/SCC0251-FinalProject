@@ -20,6 +20,6 @@ We will sample images in pairs: A stego object that may or may not have encoded 
 
 ### Example
 Original image:
-![alt text](# "Original")
+![alt text](376481.JPG "Original")
 Stego Object:
 ![alt text](# "Stego")
