@@ -13,5 +13,7 @@ to distortion in relation to the original, or cover, image. Our goal will be to 
 ### Application
 Image Steganography and Digital Forensics.
 
-### Image samples
+### Input Images
 Any images would work in this application. For this project, we will sample cover images from the [ALASKA2 Image Steganalysis](https://www.kaggle.com/c/alaska2-image-steganalysis/data) to embed with data of different sizes and types.
+
+![Example01](cover_images/00001.jpg)
