@@ -23,5 +23,7 @@ Initial code with first results can be found in the [initial.py](initial.py) pyt
 Any set of images would work in this application. For this project, we will sample cover images from the [ALASKA2 Image Steganalysis](https://www.kaggle.com/c/alaska2-image-steganalysis/data) Kaggle challenge to embed with data of different sizes and types. It was chosen for the ease of access for simple .jpg cover images, and for the similarity of the Kaggle challenge theme with this project's.
 
 Here are some cover image examples we will use:
+
 ![Example01](cover_images/00001.jpg)
+
 ![Example02](cover_images/00002.jpg)
