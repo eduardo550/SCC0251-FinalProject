@@ -1,3 +1,8 @@
+# Nomes:    Eduardo de Sousa Siqueira       nUSP: 9278299
+#           Igor Barbosa Grécia Lúcio       nUSP: 9778821
+# SCC0251 - Image Processing          1 semestre 2021
+# Partial Report
+
 import numpy as np
 import cv2
 import types
