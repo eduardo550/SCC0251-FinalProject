@@ -6,6 +6,7 @@
 import numpy as np
 import cv2
 import types
+import sys
 
 #function to change the message to binary
 def messageToBinary(message):
@@ -86,8 +87,8 @@ def psnr(cover, stego):
 
     return 10 * np.log10(aux)
 
-def main():
-    test_img = cv2.imread("cover_images/00001.jpg")
+def main(cover_filename):
+    test_img = cv2.imread(cover_filename)
 
     a = input("Image Steganography\n 1. Encode\n 2. Decode\n Your input is: ")
     userinput = int(a)
@@ -109,4 +110,9 @@ def main():
     return
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} [cover_image_path]")
+        sys.exit(0)
+        
+    cover_filename = sys.argv[1]
+    main(cover_filename)
