@@ -1,12 +1,9 @@
-# Nomes:    Eduardo de Sousa Siqueira       nUSP: 9278299
-#           Igor Barbosa Grécia Lúcio       nUSP: 9778821
-# SCC0251 - Image Processing          1 semestre 2021
-# Partial Report
+# Módulo que executa esteganografia de bits menos significantes
 
 import numpy as np
 import cv2
-import types
 import sys
+import metrics
 
 #function to change the message to binary
 def messageToBinary(message):
@@ -73,46 +70,36 @@ def decode_text(image):
     text = showData(image)
     return text
 
-def mse(cover, stego):
-    assert cover.shape == stego.shape
-    cover = cover.astype(np.double)
-    stego = stego.astype(np.double)
-    return np.mean(np.square(np.subtract(cover, stego)))
+def main(filename, userinput, payload):
+    test_img = cv2.imread(filename)
 
-def psnr(cover, stego):
-    mean_square_error = mse(cover, stego)
-    cmax = np.amax(stego)
-
-    aux = (cmax ** 2) / mean_square_error
-
-    return 10 * np.log10(aux)
-
-def main(cover_filename):
-    test_img = cv2.imread(cover_filename)
-
-    a = input("Image Steganography\n 1. Encode\n 2. Decode\n Your input is: ")
-    userinput = int(a)
-    if (userinput == 1):
+    if (userinput == 'encode'):
         print("\nEncoding...")
         testdata = ""
-        with open("testdata/small.txt", 'r') as fp:
+        with open(payload, 'r') as fp:
             lines = fp.readlines()
             for line in lines:
                 testdata += line
         encode_text(test_img,testdata)
-    elif (userinput == 2):
+    elif (userinput == 'decode'):
         print("\nDecoding...")
-        filename = input("Enter image name: ")
         img = cv2.imread(filename)
         print("Decoded message is " + decode_text(img))
         print("PSNR")
-        print(psnr(test_img,img))
+        print(metrics.psnr(test_img,img))
+    else: 
+        print(f"Unrecongnized mode {userinput}. Aborting")
     return
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} [cover_image_path]")
+    if len(sys.argv) != 4:
+        print(f"Usage: {sys.argv[0]} [mode] [image_path] [payload_path]")
+        print("Modes: encode decode")
+        print("image_path is the name of the cover image for 'encode' or the name of the stego object for 'decode'")
+        print("payload_path refers to the data to embed in image for 'encode' or the name of a file to save the extracted data for 'decode'")
         sys.exit(0)
         
-    cover_filename = sys.argv[1]
-    main(cover_filename)
+    user_opt = sys.argv[1]
+    img_filename = sys.argv[2]
+    payload_name = sys.argv[3]
+    main(img_filename, user_opt, payload_name)
