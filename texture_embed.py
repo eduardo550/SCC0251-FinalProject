@@ -2,15 +2,14 @@
 
 import sys
 
-def embed(cover, payload):
-    stego = [] #Stego image
+def max_capacity(cover):
+    pass
 
-    return stego
+def embed(cover, payload):
+    pass
 
 def extract(stego):
-    payload = []
-
-    return payload
+    pass
 
 def main(img_path, opt, payload):
 

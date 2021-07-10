@@ -1,31 +1,61 @@
-#Módulo que implementa esteganografia com base em coeficientes da transformada do cosseno discreta
-#O algoritmo inclui o dado secreto nos bits menos significativos dos coeficientes da transformada
-#É implementado pela ferramenta JSteg, uma das mais famosas na área
+#Módulo que implementa esteganografia no domínio da frequência
+#O algoritmo inclui o dado secreto nos bits menos significativos dos coeficientes da dct
 
 import imageio as io
 import sys
 import numpy as np
-from scipy.fftpack import dct, idct
+from scipy.fft import dct
+from numpy.lib import stride_tricks
 
 import utils
 import metrics
 
-def embed(cover, payload):
-    stego = dct(cover) #Stego image
+def _cosine_rgb_transform(image):
+    r = dct(image[:,:,0], type=2, norm='ortho')
+    g = dct(image[:,:,1], type=2, norm='ortho')
+    b = dct(image[:,:,2], type=2, norm='ortho')
 
-    return utils.normalize(stego, (255, 0)).astype(cover.dtype)
+    return (r, g, b)
+
+def _cosine_rgb_reverse(r, g, b):
+    ir = dct(r, type=3, norm='ortho')
+    ig = dct(g, type=3, norm='ortho')
+    ib = dct(b, type=3, norm='ortho')
+
+    return np.stack((ir, ig, ib), axis=-1)
+
+def _valid_pixels(mat):
+    return np.logical_and(mat != 0, np.logical_and(mat != 1, mat != -1))
+
+def max_capacity(cover):
+    r, g, b = _cosine_rgb_transform(cover)
+    rcap = r[_valid_pixels(r)].size
+    gcap = g[_valid_pixels(g)].size
+    bcap = b[_valid_pixels(b)].size
+
+    return (rcap + gcap + bcap) // 8
+
+
+def embed(cover, payload):
+    pass
+
+
+    #return _cosine_rgb_reverse(r, g, b).astype(cover.dtype)
 
 def extract(stego):
-    payload = []
-
-    return payload
+    pass
 
 def main(img_path, opt, payload_path):
 
     if(opt == 'encode'):
         cover = np.asarray(io.imread(img_path))
-        payload = utils.read_as_bytes(payload_path)
+        payload = utils.read_payload(payload_path)
+        m = max_capacity(cover)
+        if (len(payload) > m):
+            print(f"Payload of {len(payload)} bytes too big for cover image. Max payload capacity for this image: {m} bytes")
+            return
         stego = embed(cover, payload)
+        #utils.plot_cover_stego(cover, stego)
         #stego_path = input("Stego image name(without extension): ").strip()
         #stego_path = stego_path + '.png'
         #io.imwrite(stego_path, stego)

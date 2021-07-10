@@ -1,18 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def read_as_bytes(path):
-    data = []
-
+#A partir de path, lê o arquivo e salva como bytes precedido por um header de 8 bytes com seu tamanho
+def read_payload(path):
     with open(path, 'rb') as f:
-        while True:
-            byte = f.read(1)
-            if not byte:
-                break
-            else:
-                data.append(byte)
+        file = f.read()
 
-    return data
+    data = len(file).to_bytes(length=8, byteorder='big')
+
+    return data + file
 
 def plot_cover_stego(cover, stego):
     fig = plt.figure()
