@@ -1,6 +1,6 @@
 #Módulo que implementa esteganografia no domínio da frequência
 #O algoritmo inclui o dado secreto nos bits menos significativos dos coeficientes da dct
-
+#Defunct
 import imageio as io
 import sys
 import numpy as np
@@ -16,24 +16,23 @@ def idct2d(mat):
     return idct(idct(mat.T, norm='ortho').T, norm='ortho')
 
 def rgb_dct(image):
-    r_coefs = dct2d(image[:,:,0])
-    g_coefs = dct2d(image[:, :, 1])
-    b_coefs = dct2d(image[:, :, 2])
-    r_coefs, g_coefs, b_coefs = r_coefs.round().astype(np.int32), g_coefs.round().astype(np.int32), b_coefs.round().astype(np.int32)
+    r_coefs = np.around(dct2d(image[:, :, 0])).astype(np.int32)
+    g_coefs = np.around(dct2d(image[:, :, 1])).astype(np.int32)
+    b_coefs = np.around(dct2d(image[:, :, 2])).astype(np.int32)
 
     return (r_coefs, g_coefs, b_coefs)
 
 def idct_rgb(R, G, B):
-    r = idct2d(R)
-    g = idct2d(G)
-    b = idct2d(B)
+    r = np.around(idct2d(R)).astype(np.uint8)
+    g = np.around(idct2d(G)).astype(np.uint8)
+    b = np.around(idct2d(B)).astype(np.uint8)
 
     return np.stack((r, g, b), axis=-1)
 
 def valid_points(a):
     valids =  np.logical_and(
         a != 0,
-        np.logical_and(a != 1, a != -1) 
+        a != 1 
     )
     valids[0, 0] = False # O primeiro ponto não é manipulado
     return valids
@@ -77,11 +76,20 @@ def embed(cover, payload):
                 cur_bitmask_8bit = cur_bitmask_8bit >> 1    
         if(bytes_processed == len(payload)): break
 
-    return idct_rgb(r, g, b).astype(cover.dtype)
-    
+    return r, g, b
 
-def extract(stego):
-    pass
+def extract(r, g, b):
+    #Extraindo 8 bytes do Header
+    lsb_mask = np.array(1, r.dtype)
+    valid_rows, valid_cols = np.where(valid_points(r))
+    header_coords = list(zip(valid_rows, valid_cols))[:64]
+    header = 0
+    for i, j in header_coords:
+        bit = r[i, j] & lsb_mask
+        header = header | bit
+        header = header << 1
+
+    print(header)
 
 def main(img_path, opt):
 
@@ -93,12 +101,14 @@ def main(img_path, opt):
         if (len(payload) > m):
             print(f"Payload of {len(payload)} bytes too big for cover image. Max payload capacity for this image: {m} bytes")
             return
-        stego = embed(cover, payload)
+        stego_r, stego_g, stego_b = embed(cover, payload)
+        stego = idct_rgb(stego_r, stego_g, stego_b)
         stego_path = input("Stego image name(without extension): ").strip()
         stego_path = stego_path + '.png'
-        io.imwrite(stego_path, stego)
+        io.imwrite(stego_path, stego, format='PNG-PIL', compress_level=0)
     elif(opt == 'decode'):
         stego = np.asarray(io.imread(img_path))
+        print(stego[0, 1:65, 0])
         payload = extract(stego)
         print(f"Payload found: {payload}")
     else:
@@ -110,7 +120,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         print(f"Usage: {sys.argv[0]} [mode] [image_path]")
         print("Modes: encode decode")
-        print("image_path is the name of the cover image for 'encode' or the name of the stego object for 'decode'")
+        print("image_path is the name of the cover image for 'encode' or the name of the file containing the coeficients for 'decode'")
         sys.exit(0)
         
     user_opt = sys.argv[1]
