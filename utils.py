@@ -15,9 +15,11 @@ def plot_cover_stego(cover, stego):
     fig.add_subplot(1, 2, 1)
     plt.imshow(cover)
     plt.title("Cover")
+    plt.axis('off')
     fig.add_subplot(1, 2, 2)
     plt.imshow(stego)
     plt.title("Stego")
+    plt.axis('off')
     plt.show()
 
 def normalize(image, values):
