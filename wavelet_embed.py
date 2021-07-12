@@ -4,8 +4,9 @@
 # 2015 International Conference on Science in Information Technology (ICSITech), 2015, pp. 79-84, doi: 10.1109/ICSITech.2015.7407781.
 
 import imageio as io
-import sys
 import numpy as np
+from collections import deque
+import sys
 
 import utils
 import metrics
@@ -58,10 +59,15 @@ def reconstruct_mat(cA, cH, cV, cD):
 
     return new_image
 
-def max_capacity(cover, threshold=2):
-    _, a, b, c = get_bands(iwt2(cover))
+def max_channel_capacity(channel, threshold=2):
+    _, a, b, c = get_bands(iwt2(channel))
     cap = a.size + b.size + c.size
     return (cap * threshold) // 8
+
+def max_capacity(cover):
+    r, g, b = cover[:, :, 0], cover[:, :, 1], cover[:, :, 2]
+
+    return max_channel_capacity(r) + max_channel_capacity(g) + max_channel_capacity(b)
 
 def get_next_bits(byte_buffer, digits, amount):
     bitmask = 1
@@ -131,12 +137,16 @@ def embed(cover, payload, threshold=2):
     #Preprocessamento
     clipped_cover = np.clip(cover, threshold*WEIGHTING, 255 - (threshold*WEIGHTING))
     #Aplicação da transformada
-    freq = iwt2(clipped_cover)
-    cA, cH, cV, cD = get_bands(freq)    #cA não é alterada, pois causa a maior distorção na imagem
-
+    r, g, b = clipped_cover[:, :, 0], clipped_cover[:, :, 1], clipped_cover[:, :, 2]
+    freq_r, freq_g, freq_b = iwt2(r), iwt2(g), iwt2(b)
+    r_cA, *r_bands = get_bands(freq_r)    #cA não é alterada, pois causa a maior distorção na imagem
+    g_cA, *g_bands = get_bands(freq_g)
+    b_cA, *b_bands = get_bands(freq_b)
+    bands_queue = [*r_bands, *g_bands, *b_bands]
+    
     bytes_processed = 0
     while(bytes_processed < len(payload)):
-        for band in [cH.view(), cV.view(), cD.view()]:
+        for band in bands_queue:
             evens, odds = (band[:, ::2], band[:, 1::2])
             remainder_groups = (evens + odds) % (2 ** threshold)
             t_values, b = get_next_bits(payload[bytes_processed:], threshold, remainder_groups.size)
@@ -146,14 +156,28 @@ def embed(cover, payload, threshold=2):
         #endfor
     #endwhile
 
-    #Transformada inversa, construindo a imagem no domínio espacial
-    stego = reconstruct_mat(cA, cH, cV, cD)
-    return iiwt2(stego).astype(cover.dtype)
+    #Transformada inversa, construindo a imagem no domínio espacial em cada canal
+    r_channel = iiwt2(reconstruct_mat(r_cA, *r_bands))
+    g_channel = iiwt2(reconstruct_mat(g_cA, *g_bands))
+    b_channel = iiwt2(reconstruct_mat(b_cA, *b_bands))
+    stego = np.stack((r_channel, g_channel, b_channel), axis=-1)
+
+    return stego.astype(cover.dtype)
+
+def bits_to_byte(array, bits):
+    for i in range(0, 8 // bits):
+        array[i] = array[i] << (8 -(1+i)*bits)
+
+    return np.sum(array).astype(np.uint8).tobytes()
 
 def extract(stego, threshold=2):
+    r, g, b = stego[:, :, 0], stego[:, :, 1], stego[:, :, 2]
     #Convertendo para wavelets
-    freq = iwt2(stego)
-    _, *bands = get_bands(freq)
+    freq_r, freq_g, freq_b = iwt2(r), iwt2(g), iwt2(b)
+    _, *r_bands = get_bands(freq_r)
+    _, *g_bands = get_bands(freq_g)
+    _, *b_bands = get_bands(freq_b)
+    bands = [*r_bands, *g_bands, *b_bands]
 
     evens, odds = (bands[0][:, ::2], bands[0][:, 1::2])
     remainder_groups = np.ravel((evens + odds) % (2 ** threshold))
@@ -165,40 +189,45 @@ def extract(stego, threshold=2):
         payload_size = payload_size << threshold
         payload_size += digits
 
-    payload = 0
+    payload = bytes()
     cur = remainder_groups[header_bits:]
     band_idx = 0
     idx = 0
-    for bit in range((payload_size*8)//threshold):
-        payload = payload << threshold
-        payload += cur[idx]
-        idx += 1
+    for byte in range(payload_size):
+        #Processando por bytes
+        bits = cur[idx:idx+(8//threshold)]
+        payload = payload + bits_to_byte(bits, threshold)
+        idx += 8 // threshold
         if(idx >= cur.size):
             band_idx += 1
-            evens, odds = (bands[band_idx][:, ::2], bands[band_idx][:, 1::2])
-            cur = np.ravel((evens + odds) % (2 ** threshold))
+            evens, odds = (bands[0][:, ::2], bands[0][:, 1::2])
+            cur = np.ravel((evens+odds) % (2 ** threshold))
             idx = 0
 
+    return payload
+
 def main(img_path, opt):
-    np.set_printoptions(threshold=sys.maxsize)
     if(opt == 'encode'):
-        cover = np.asarray(io.imread(img_path, pilmode='L'))
-        payload_path = "testdata/small.txt" #input("Payload filename: ").rstrip()
+        cover = np.asarray(io.imread(img_path, pilmode='RGB'))
+        payload_path = input("Payload filename: ").rstrip()
         payload = utils.read_payload(payload_path)
         m = max_capacity(cover)
         if(m < len(payload)):
             print(f"Payload of {len(payload)} bytes cannot be embedded in this cover image. Max capacity: {m} bytes")
             return
         stego = embed(cover, payload)
-        # print(np.array_equal(cover, stego))
-        # utils.plot_cover_stego(cover, stego)
-        #stego_path = input("Stego image name(without extension): ").strip()
-        stego_path = 'bla' + '.png'
+        stego_path = input("Stego image name(without extension): ").strip()
+        stego_path = stego_path + '.png'
         io.imwrite(stego_path, stego, format='PNG-PIL', compress_level=0)
+        print(f"PSNR for this operation: {metrics.psnr(cover, stego):.4f}")
     elif(opt == 'decode'):
         stego = np.asarray(io.imread(img_path))
         payload = extract(stego)
-        print(f"Payload found: {payload}")
+        payload_path = img_path.split("/")[-1].split(".")[0]
+        print(f"Payload of size {len(payload)} bytes found.")
+        with open(payload_path + ".bin", 'wb') as fp:
+            fp.write(payload)
+            print("Saved in file " + payload_path + ".bin")
     else:
         print("Option not recognized.")
 
