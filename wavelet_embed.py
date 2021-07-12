@@ -200,7 +200,7 @@ def extract(stego, threshold=2):
         idx += 8 // threshold
         if(idx >= cur.size):
             band_idx += 1
-            evens, odds = (bands[0][:, ::2], bands[0][:, 1::2])
+            evens, odds = (bands[band_idx][:, ::2], bands[band_idx][:, 1::2])
             cur = np.ravel((evens+odds) % (2 ** threshold))
             idx = 0
 
