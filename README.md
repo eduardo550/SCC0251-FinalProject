@@ -8,4 +8,4 @@
 In this project we will implement different steganographic techniques to hide data in digital images. We will compare and contrast techniques in the spatial and frequency domains in regard to distortion in relation to the original (cover) image and each other. Our goal will be to learn about the application of Image Steganography as well as its effects.
 
 ## Final Report
-The final report can be found in [Final Report.ipynb]
+The final report can be found in [Final Report.ipynb](https://github.com/eduardo550/SCC0251-FinalProject/blob/main/Final%20report.ipynb)
