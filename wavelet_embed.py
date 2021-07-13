@@ -10,6 +10,7 @@ import sys
 
 import utils
 import metrics
+from lsb_embed import SteganographyException
 
 #Integer Haar Wavelet Transform
 ###Implementation found in https://stackoverflow.com/a/15868889
@@ -133,6 +134,7 @@ def embed_values(coefs, rk, tk, bits):
     return g, gnext
 
 def embed(cover, payload, threshold=2):
+    if(len(payload) > max_capacity(cover)): raise SteganographyException
     WEIGHTING = 2   #constante determinada no artigo
     #Preprocessamento
     clipped_cover = np.clip(cover, threshold*WEIGHTING, 255 - (threshold*WEIGHTING))
