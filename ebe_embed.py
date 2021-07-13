@@ -112,7 +112,6 @@ class Steg():
             print("Payload size = ",(l+64)," Bytes")
             print("Image can hold up to ",max_cap," Bytes")
             raise SteganographyException("Payload is too large.")
-        self.put_binary_value(self.binary_value(l, 64))
         for byte in data:
             byte = byte if isinstance(byte, int) else ord(byte) # Compat py2/py3
             self.put_binary_value(self.byteValue(byte))
@@ -136,8 +135,7 @@ def main(user_opt, image_name, payload):
     steg = Steg(in_img)
 
     if (user_opt == 'encode'):
-        with open(payload, 'rb') as f:
-            data = f.read()
+        data = utils.read_payload(payload)
         res = steg.embed(data)
         filename = input("Enter new image name(without extension): ")
         file = filename + ".png"
