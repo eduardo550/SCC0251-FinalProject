@@ -61,7 +61,7 @@ def reconstruct_mat(cA, cH, cV, cD):
 
 def max_channel_capacity(channel, threshold=2):
     _, a, b, c = get_bands(iwt2(channel))
-    cap = a.size + b.size + c.size
+    cap = (a.size + b.size + c.size) // 2
     return (cap * threshold) // 8
 
 def max_capacity(cover):
