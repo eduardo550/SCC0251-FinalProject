@@ -12,7 +12,7 @@ class SteganographyException(Exception):
 class Steg():
     def __init__(self, im):
         self.image = im
-        self.sobel_x, self.sobel_y = ebe_get_sobel(im)
+        self.sobel_x, self.sobel_y = get_sobel(im)
         self.height, self.width, self.nbchannels = im.shape
         self.size = self.width * self.height
         
@@ -49,7 +49,7 @@ class Steg():
 
     def put_binary_value(self, bits): #Put the bits in the image
         for c in bits:
-            while self.ebe_gradient() < 50:
+            while self.gradient() < 50:
                 self.next_slot()
             val = list(self.image[self.curheight,self.curwidth]) #Get the pixel value as a list
             if int(c) == 1:
@@ -61,12 +61,12 @@ class Steg():
             self.next_slot() #Move "cursor" to the next space
         return
 
-    def ebe_gradient(self):
+    def gradient(self):
         x = self.sobel_x[self.curheight,self.curwidth]
         y = self.sobel_y[self.curheight,self.curwidth]
         return math.sqrt(x**2 + y**2)
 
-    def ebe_max_capacity(self):
+    def max_capacity(self):
         ngrad = 0
         for x in range(self.width):
             for y in range(self.height):
@@ -75,7 +75,7 @@ class Steg():
         return (ngrad*self.nbchannels)/4
 
     def read_bit(self): #Read a single bit into the image
-        while self.ebe_gradient() < 50:
+        while self.gradient() < 50:
             self.next_slot()
         val = self.image[self.curheight,self.curwidth][self.curchan]
         val = int(val) & self.maskONE
@@ -105,9 +105,9 @@ class Steg():
             binval = "0"+binval
         return binval
     
-    def ebe_embed(self, data):
+    def embed(self, data):
         l = len(data)
-        max_cap = self.ebe_max_capacity()
+        max_cap = self.max_capacity()
         if max_cap < l+64:
             print("Payload size = ",(l+64)," Bytes")
             print("Image can hold up to ",max_cap," Bytes")
@@ -118,14 +118,14 @@ class Steg():
             self.put_binary_value(self.byteValue(byte))
         return self.image
 
-    def ebe_extract(self):
+    def extract(self):
         l = int(self.read_bits(64), 2)
         output = b""
         for i in range(l):
             output += bytearray([int(self.read_byte(),2,)])
         return output
 
-def ebe_get_sobel(img):
+def get_sobel(img):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         sobel_x = cv2.Sobel(gray, cv2.CV_16S, 1, 0, ksize=3, scale=1, delta=0, borderType=cv2.BORDER_DEFAULT)
         sobel_y = cv2.Sobel(gray, cv2.CV_16S, 0, 1, ksize=3, scale=1, delta=0, borderType=cv2.BORDER_DEFAULT)
@@ -138,13 +138,13 @@ def main(user_opt, image_name, payload):
     if (user_opt == 'encode'):
         with open(payload, 'rb') as f:
             data = f.read()
-        res = steg.ebe_embed(data)
+        res = steg.embed(data)
         filename = input("Enter new image name(without extension): ")
         file = filename + ".png"
         cv2.imwrite(file, res)
 
     elif (user_opt == 'decode'):
-        raw = steg.ebe_extract()
+        raw = steg.extract()
         with open(payload, "wb") as f:
             f.write(raw)
 

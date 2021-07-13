@@ -45,7 +45,7 @@ class Steg():
             self.next_slot() #Move "cursor" to the next space
         return
 
-    def lsb_max_capacity(self):
+    def max_capacity(self):
         return (self.size*self.nbchannels)/8
 
     def read_bit(self): #Read a single bit into the image
@@ -77,9 +77,9 @@ class Steg():
             binval = "0"+binval
         return binval
     
-    def lsb_embed(self, data):
+    def embed(self, data):
         l = len(data)
-        max_cap = self.lsb_max_capacity()
+        max_cap = self.max_capacity()
         if max_cap < l+64:
             print("Payload size = ",(l+64)," Bytes")
             print("Image can hold up to ",max_cap," Bytes")
@@ -90,7 +90,7 @@ class Steg():
             self.put_binary_value(self.byteValue(byte))
         return self.image
 
-    def lsb_extract(self):
+    def extract(self):
         l = int(self.read_bits(64), 2)
         output = b""
         for i in range(l):
@@ -104,13 +104,13 @@ def main(user_opt, image_name, payload):
     if (user_opt == 'encode'):
         with open(payload, 'rb') as f:
             data = f.read()
-        res = steg.lsb_embed(data)
+        res = steg.embed(data)
         filename = input("Enter new image name(without extension): ")
         file = filename + ".png"
         cv2.imwrite(file, res)
 
     elif (user_opt == 'decode'):
-        raw = steg.lsb_extract()
+        raw = steg.extract()
         with open(payload, "wb") as f:
             f.write(raw)
 
