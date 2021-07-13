@@ -5,6 +5,7 @@ import sys
 import cv2
 import numpy as np
 import math
+import utils
 
 class SteganographyException(Exception):
     pass
