@@ -4,7 +4,6 @@
 import sys
 import cv2
 import numpy as np
-import lsb
 import math
 
 class SteganographyException(Exception):
@@ -17,11 +16,11 @@ class Steg():
         self.height, self.width, self.nbchannels = im.shape
         self.size = self.width * self.height
         
-        self.maskONEValues = [1,2,4,8,16,32,64,128]
+        self.maskONEValues = [1,2]
         #Mask used to put one ex:1->00000001, 2->00000010 .. associated with OR bitwise
         self.maskONE = self.maskONEValues.pop(0) #Will be used to do bitwise operations
         
-        self.maskZEROValues = [254,253,251,247,239,223,191,127]
+        self.maskZEROValues = [254,253]
         #Mask used to put zero ex:254->11111110, 253->11111101 .. associated with AND bitwise
         self.maskZERO = self.maskZEROValues.pop(0)
         
@@ -30,25 +29,25 @@ class Steg():
         self.curchan = 0   # Current channel position
         
     def next_slot(self):#Move to the next slot were information can be taken or put
-        if self.curchan == self.nbchannels-1: #Next Space is the following channel
-            self.curchan = 0
-            if self.curwidth == self.width-1: #Or the first channel of the next pixel of the same line
-                self.curwidth = 0
-                if self.curheight == self.height-1:#Or the first channel of the first pixel of the next line
-                    self.curheight = 0
-                    if self.maskONE == 128: #Mask 1000000, so the last mask
+        if self.curchan == self.nbchannels-1:
+            self.curchan = 0 #Next Space is the first channel of the next pixel
+            if self.curwidth == self.width-1:
+                self.curwidth = 0 #Next Space is the first pixel
+                if self.curheight == self.height-1:
+                    self.curheight = 0 #Next Space is the first line (Using the second bit now)
+                    if self.maskONE == 2:
                         raise SteganographyException("No available slot remaining (image filled)")
-                    else: #Or instead of using the first bit start using the second and so on..
+                    else: #Or instead of using the first bit start using the second.
                         self.maskONE = self.maskONEValues.pop(0)
                         self.maskZERO = self.maskZEROValues.pop(0)
                 else:
-                    self.curheight +=1
+                    self.curheight +=1 #Next Space is the following line
             else:
-                self.curwidth +=1
+                self.curwidth +=1 #Next Space is the following pixel of the same line
         else:
-            self.curchan +=1
+            self.curchan +=1 #Next Space is the following channel
 
-    def ebe_put_binary_value(self, bits): #Put the bits in the image
+    def put_binary_value(self, bits): #Put the bits in the image
         for c in bits:
             while self.ebe_gradient() < 50:
                 self.next_slot()
@@ -66,6 +65,14 @@ class Steg():
         x = self.sobel_x[self.curheight,self.curwidth]
         y = self.sobel_y[self.curheight,self.curwidth]
         return math.sqrt(x**2 + y**2)
+
+    def ebe_max_capacity(self):
+        ngrad = 0
+        for x in range(self.width):
+            for y in range(self.height):
+                if math.sqrt(self.sobel_x[y,x]**2 + self.sobel_y[y,x]**2) > 49:
+                    ngrad+=1
+        return (ngrad*self.nbchannels)/4
 
     def read_bit(self): #Read a single bit into the image
         while self.ebe_gradient() < 50:
@@ -98,21 +105,24 @@ class Steg():
             binval = "0"+binval
         return binval
     
-    def encode_binary(self, data):
+    def ebe_embed(self, data):
         l = len(data)
-        if self.width*self.height*self.nbchannels < l+64:
-            raise SteganographyException("Carrier image not big enough to hold all the datas to steganography")
-        self.ebe_put_binary_value(self.binary_value(l, 64))
+        max_cap = self.ebe_max_capacity()
+        if max_cap < l+64:
+            print("Payload size = ",(l+64)," Bytes")
+            print("Image can hold up to ",max_cap," Bytes")
+            raise SteganographyException("Payload is too large.")
+        self.put_binary_value(self.binary_value(l, 64))
         for byte in data:
             byte = byte if isinstance(byte, int) else ord(byte) # Compat py2/py3
-            self.ebe_put_binary_value(self.byteValue(byte))
+            self.put_binary_value(self.byteValue(byte))
         return self.image
 
-    def decode_binary(self):
+    def ebe_extract(self):
         l = int(self.read_bits(64), 2)
         output = b""
         for i in range(l):
-            output += bytearray([int(self.read_byte(),2)])
+            output += bytearray([int(self.read_byte(),2,)])
         return output
 
 def ebe_get_sobel(img):
@@ -128,19 +138,13 @@ def main(user_opt, image_name, payload):
     if (user_opt == 'encode'):
         with open(payload, 'rb') as f:
             data = f.read()
-        with open("sobelx.txt", "wb") as f:
-            f.write(steg.sobel_x)
-        with open("sobely.txt", "wb") as f:
-            f.write(steg.sobel_y)
-        res = steg.encode_binary(data)
+        res = steg.ebe_embed(data)
         filename = input("Enter new image name(without extension): ")
         file = filename + ".png"
         cv2.imwrite(file, res)
 
     elif (user_opt == 'decode'):
-        raw = steg.decode_binary()
-        print("Steg is:")
-        #print(raw)
+        raw = steg.ebe_extract()
         with open(payload, "wb") as f:
             f.write(raw)
 
